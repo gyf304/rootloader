@@ -1,0 +1,47 @@
+#!/bin/sh
+
+clearscreen () {
+	printf '\033[2J\033[0;0H' >&2
+}
+
+boot () {
+	set -e
+	mount -t proc proc /proc
+	mount -t devtmpfs devtmpfs /dev
+	# read the kernel command line option rootloader=
+	rootloader="$(cat /proc/cmdline | sed 's/ /\n/g' | grep rootloader= | cut -d= -f2-)"
+	if [ "$rootloader" = "" ]; then
+		# no rootloader option, default to mmcblk0p1
+		rootloader="mmcblk0p1"
+	fi
+	mount "/dev/$rootloader" /boot
+	exec /boot/init
+}
+
+menu () {
+	export inhibit_prompt=1
+	option=$(choose "Boot" "Rescue Shell" "Reboot" "Poweroff")
+	clearscreen
+	if [ "$option" = "Boot" ]; then
+		boot
+	elif [ "$option" = "Rescue Shell" ]; then
+		clearscreen
+		exec sh
+	elif [ "$option" = "Reboot" ]; then
+		reboot -f # -f since we are init
+	elif [ "$option" = "Poweroff" ]; then
+		poweroff -f # -f since we are init
+	fi
+	menu
+}
+
+countdown 5
+interrupted=$?
+
+if [ "$interrupted" = "0" ]; then
+	# no key pressed, boot
+	boot
+else
+	# key pressed, show menu
+	menu
+fi

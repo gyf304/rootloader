@@ -1,0 +1,40 @@
+#!/bin/sh
+
+# Usage: wait <seconds> <prompt>
+
+clearscreen () {
+	printf '\033[2J\033[0;0H' >&2
+}
+
+p () {
+	printf "$@" >&2
+}
+
+clearscreen
+
+wait="$1"
+if [ "$wait" = "" ]; then
+	wait=3
+fi
+
+prompt="$2"
+if [ "$prompt" = "" ]; then
+	prompt="Press any key to interrupt."
+fi
+
+interrupted=0
+for i in $(seq 1 $wait); do
+	countdown=$(($wait - $i + 1))
+	p "\r%s %d" "$prompt" "$countdown"
+	OLD_IFS="$IFS"
+	IFS=''
+	read -r -s -n1 -t1 key
+	if [ "$?" = 0 ]; then
+		interrupted=1
+		break
+	fi
+	IFS="$OLD_IFS"
+done
+p "\033[1K\r"
+
+exit "$interrupted"

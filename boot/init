@@ -1,0 +1,4 @@
+#!/bin/sh
+
+mount /boot/root.img /mnt
+exec switch_root /mnt /sbin/init

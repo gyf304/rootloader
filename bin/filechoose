@@ -1,0 +1,34 @@
+#!/bin/sh
+
+dir="$PWD"
+
+clearscreen () {
+	printf '\033[2J\033[0;0H' >&2
+}
+
+fsel () {
+	if [ "$1" != "" ]; then
+		cd "$1"
+		fsel
+		return
+	fi
+
+	clearscreen
+	file=$("$dir/choose" .. *)
+	exitcode=$?
+	clearscreen
+
+	if [ $exitcode -ne 0 ]; then
+		exit $exitcode
+	fi
+	export inhibit_prompt=1
+
+	if [ -d "$file" ]; then
+		cd "$file"
+		fsel
+		return
+	fi
+	echo "$PWD/$file"
+}
+
+fsel "$1"

@@ -1,0 +1,117 @@
+#!/bin/sh
+
+# This file is compatible with bash, zsh, and busybox ash.
+
+if [ "$1" = "" ]; then
+	echo "Usage: $0 <option1> <option2> ..."
+	exit 1
+fi
+
+if [ "$COLUMNS" = "" ]; then
+	COLUMNS=`stty size | cut -d' ' -f2`
+fi
+
+if [ "$ROWS" = "" ]; then
+	ROWS=`stty size | cut -d' ' -f1`
+fi
+
+max_line_len=$(($COLUMNS - 4))
+max_options=$(($ROWS - 4))
+
+p () {
+	# print to stderr
+	printf "$1" "$2" >&2
+}
+
+if [ "$inhibit_prompt" == "" ]; then
+	p "%s\n" "Use arrow keys to navigate; Enter to confirm, Q to cancel."
+	export inhibit_prompt=1
+fi
+
+num_options="$#"
+if [ "$num_options" -gt "$max_options" ]; then
+	overflow=1
+	num_options=$((max_options + 1))
+fi
+
+ctr=0
+for option in "$@"; do
+	p "  %.${max_line_len}s\n" "$option"
+	ctr=$(($ctr + 1))
+	if [ "$overflow" == 1 ] && [ "$ctr" -eq "$max_options" ]; then
+		p "  ... (%s more)\n" "$(($# - $max_options))"
+		break
+	fi
+done
+
+# move cursor up to the first line
+p '\033[%dA' "$num_options"
+# print ">"
+p '>\r'
+cur=0
+
+abort=0
+# read input
+while read -r -s -n1 key; do
+	case "$key" in
+		$'\033') # escape sequence
+			read -r -s -n2 key
+			case "$key" in
+				[A) # up
+					if [ "$cur" -gt 0 ]; then
+						cur=$((cur-1))
+						p ' \r\033[1A>\r'
+					fi
+					;;
+				[B) # down
+					if [ "$cur" -lt "$((num_options-1))" ]; then
+						cur=$((cur+1))
+						p ' \r\033[1B>\r'
+					fi
+					;;
+			esac
+			;;
+		'') # enter
+			break
+			;;
+		$'\n') # enter
+			break
+			;;
+		$'\r') # enter
+			break
+			;;
+		$' ') # space
+			break
+			;;
+		$'q') # Q
+			abort=1
+			break
+			;;
+		$'Q') # Q
+			abort=1
+			break
+			;;
+	esac
+done
+
+# move cursor to end of options
+if [ "$cur" -lt "$((num_options-1))" ]; then
+	p '\033[%dB' "$((num_options-cur-1))"
+fi
+p '\n'
+
+if [ "$abort" -eq 1 ]; then
+	exit 1
+fi
+
+if [ "$cur" -eq "$max_options" ]; then
+	# user selected the "..." option
+	cmd=$0
+	shift $((num_options-1))
+	p '\033[2J\033[0;0H'
+	"$cmd" "$@"
+else
+	# print selected option
+	expr='${'"$((cur+1))"'}'
+	eval echo "$expr"
+fi
