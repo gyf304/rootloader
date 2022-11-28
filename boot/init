@@ -1,4 +1,13 @@
 #!/bin/sh
 
-mount /boot/root.img /mnt
+image="/boot/root.img"
+countdown 5 "Booting from $image in"
+ret=$?
+if [ $ret != "0" ]; then
+	cd /boot
+	image="/boot/$(choose *.img)"
+	cd /
+fi
+
+mount "$image" /mnt
 exec switch_root /mnt /sbin/init

@@ -5,7 +5,7 @@ dir="$PWD"
 cd /tmp
 
 rm -rf busybox-1.35.0
-curl -sSL https://busybox.net/downloads/busybox-1.35.0.tar.bz2 | tar -xj
+tar -xj "$dir/busybox-1.35.0.tar.bz2"
 cd busybox-1.35.0
 
 # Build busybox
@@ -13,8 +13,8 @@ cat > .config << EOF
 CONFIG_STATIC=y
 EOF
 yes "" | make oldconfig
-make CROSS_COMPILE=/opt/musl-cross/aarch64-linux-musl/bin/aarch64-linux-musl-
-make install CROSS_COMPILE=/opt/musl-cross/aarch64-linux-musl/bin/aarch64-linux-musl-
+make -j "CROSS_COMPILE=$CROSS_COMPILE"
+make install "CROSS_COMPILE=$CROSS_COMPILE"
 
 # make busybox suid
 chmod u+s _install/bin/busybox
@@ -29,5 +29,4 @@ install -Dm755 "$dir/init" _install/init
 
 cd _install
 find . -print0 | cpio --null -ov --format=newc \
-  | gzip -9 > "$dir/initramfs.cpio.gz"
-
+  | gzip -9 > /tmp/initramfs.cpio.gz
