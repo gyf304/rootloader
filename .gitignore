@@ -1,3 +1,4 @@
 *.gz
 *.img
 out/
+.DS_Store
